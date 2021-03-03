@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -12,12 +12,14 @@ export class ProductsService {
     private readonly productsRepository: Repository<Products>,
   ) {}
 
-  create(CreateProductDto: CreateProductDto): Promise<Products> {
-    const product = new Products();
-    product.name = CreateProductDto.name;
-    product.price = CreateProductDto.price;
+  async create(CreateProductDto: CreateProductDto): Promise<Products> {
+    try {
+      const product = new Products();
+      product.name = CreateProductDto.name;
+      product.price = CreateProductDto.price;
 
-    return this.productsRepository.save(product);
+      return await this.productsRepository.save(product);
+    } catch (error) {}
   }
 
   async findAll(): Promise<Products[]> {
@@ -25,7 +27,11 @@ export class ProductsService {
   }
 
   async findOne(productId: number): Promise<Products> {
-    return this.productsRepository.findOne(productId);
+    const product = await this.productsRepository.findOne(productId);
+    if (!product) {
+      throw new NotFoundException(`Product with ID ${productId} not found`);
+    }
+    return product;
   }
 
   async deleteOne(productId: number): Promise<void> {
@@ -38,7 +44,6 @@ export class ProductsService {
     updataData: UpdateProductDto,
   ): Promise<void> {
     const productToUpdate = await this.productsRepository.findOne(productId);
-    console.log(updataData);
     if (updataData.name) productToUpdate.name = updataData.name;
     if (updataData.price) productToUpdate.price = updataData.price;
     await this.productsRepository.save(productToUpdate);
